@@ -1,0 +1,130 @@
+#!/bin/bash
+
+# Usage: ./setup_ln.sh <BITCOIN_IP> [LN_NODE_ALIAS]
+#
+#   <BITCOIN_IP>: IP address of the Bitcoin Core node.
+#   [LN_NODE_ALIAS]: Optional alias for the Lightning Network node. If not provided, the hostname is used.
+
+# Check if setup has already been performed.
+if [ ! -f "$HOME/.ln_setup_done" ]; then
+    # Extract IP address from command line arguments.
+    BITCOIN_IP="$1"
+
+    # Check if Bitcoin IP is empty.
+    if [ -z "$BITCOIN_IP" ]; then
+        echo "Error: Bitcoin Core IP address not provided."
+        exit 1
+    fi
+    
+    # Extract LN_NODE_ALIAS from command line arguments or use hostname.
+    LN_NODE_ALIAS="$2"
+    if [ -z "$LN_NODE_ALIAS" ]; then
+        LN_NODE_ALIAS=$(hostname)
+    fi
+
+    # Update packages without prompts.
+    sudo apt-get update -y
+    sudo apt-get install -y git make jq
+
+    # Download Bitcoin Core 23.0.
+    wget --no-directories https://bitcoincore.org/bin/bitcoin-core-23.0/bitcoin-23.0-aarch64-linux-gnu.tar.gz
+    sudo tar -C /usr/local -xzf bitcoin-23.0-aarch64-linux-gnu.tar.gz
+    rm -rf bitcoin-23.0-aarch64-linux-gnu.tar.gz
+
+    # Configure Bitcoin Environment Variables.
+    echo -e "\n" "# Configure Bitcoin Environment Variables." >> "$HOME/.bashrc"
+    echo -e "export PATH=\"\$PATH:/usr/local/bitcoin-23.0/bin\"" "\n" >> "$HOME/.bashrc"
+
+    # Create Bitcoin directory if not exist.
+    mkdir -p "$HOME/.bitcoin"
+
+    # Create bitcoin configuration file.
+    cat << EOF > "$HOME/.bitcoin/bitcoin.conf"
+chain=regtest
+daemon=1
+debug=1
+debuglogfile=debug.log
+
+rpcuser=test
+rpcpassword=test
+
+rpcconnect=$BITCOIN_IP
+zmqpubrawblock=tcp://$BITCOIN_IP:28332
+zmqpubrawtx=tcp://$BITCOIN_IP:28333
+
+[regtest]
+fallbackfee=0.000001
+dnsseed=0
+noconnect=1
+txindex=1
+EOF
+
+    # Install go version 1.22.1 without prompts.
+    wget --no-check-certificate --no-directories --timestamping https://go.dev/dl/go1.22.1.linux-arm64.tar.gz
+    sudo tar -C /usr/local -xzf go1.22.1.linux-arm64.tar.gz
+    rm -rf go1.22.1.linux-arm64.tar.gz
+
+    # Update Go Installation Binaries Env Variable.
+    export GO_INSTALL="/usr/local/go/bin"
+    export PATH="$PATH:$GO_INSTALL"
+    echo "# Update Go Installation Binaries Env Variable." >> "$HOME/.bashrc"
+    echo -e "export PATH=\"\$PATH:$GO_INSTALL\"" "\n" >> "$HOME/.bashrc"
+
+    # Configure Go Environment Variables.
+    export GOPATH="$HOME/go"
+    export GOBIN="$GOPATH/bin"
+    export PATH="$PATH:$GOBIN"
+    echo "# Configure Go Environment Variables." >> "$HOME/.bashrc"
+    echo "export GOPATH=$GOPATH" >> "$HOME/.bashrc"
+    echo "export GOBIN=$GOBIN" >> "$HOME/.bashrc"
+    echo -e "export PATH=\"\$PATH:\$GOBIN\"" "\n" >> "$HOME/.bashrc"
+
+    # Point lncli to regtest network by default.
+    echo "# Point lncli to regtest network by default." >> "$HOME/.bashrc"
+    echo -e "alias lncli=\"\$GOBIN/lncli --network regtest\"" "\n" >> "$HOME/.bashrc"
+
+    # Clone the lnd repo and change current working directory.
+    git clone https://github.com/lightningnetwork/lnd.git "$HOME/lnd"
+    cd "$HOME/lnd"
+
+    # Build Binaries.
+    make && sudo -E env "PATH=$PATH" make install
+
+    # Create LND directory if not exist.
+    mkdir -p "$HOME/.lnd"
+
+    # Create lnd.conf configuration file
+    cat << EOF > "$HOME/.lnd/lnd.conf"
+[Application Options]
+
+; Debug logging level.
+; Valid levels are {trace, debug, info, warn, error, critical}
+; You may also specify <global-level>,<subsystem>=<level>,<subsystem2>=<level>,...
+; to set log level for individual subsystems. Use lncli debuglevel --show to
+; list available subsystems.
+debuglevel=debug
+
+
+; The alias your node will use, which can be up to 32 UTF-8 characters in
+; length.
+alias=$LN_NODE_ALIAS
+
+[Bitcoin]
+
+; Use Bitcoin's regression test network
+bitcoin.regtest=true
+
+; NOTE: Please note that switching between a full back-end (btcd/bitcoind) and
+; a light back-end (neutrino) is not supported.
+bitcoin.node=bitcoind
+
+[Bitcoind]
+; The host that your local bitcoind daemon is listening on. By default, this
+; setting is assumed to be localhost with the default port for the current
+; network.
+bitcoind.rpchost=$BITCOIN_IP
+EOF
+
+    # Mark setup as done.
+    touch "$HOME/.ln_setup_done"
+fi
