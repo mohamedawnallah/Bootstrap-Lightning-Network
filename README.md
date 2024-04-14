@@ -15,9 +15,9 @@ This script automates the setup process for Lightning Network nodes, enabling a 
 
 3. SSH into each Multipass instance and run the script:
    ```bash
-   multipass exec alice -- bash -c 'curl -sSL https://raw.githubusercontent.com/mohamedawnallah/bootstrap-lightning-network/main/setup_ln | bash -s $BITCOIN_IP $LN_NODE_ALIAS'
-   multipass exec bob -- bash -c 'curl -sSL https://raw.githubusercontent.com/mohamedawnallah/bootstrap-lightning-network/main/setup_ln | bash -s $BITCOIN_IP $LN_NODE_ALIAS'
-   multipass exec carol -- bash -c 'curl -sSL https://raw.githubusercontent.com/mohamedawnallah/bootstrap-lightning-network/main/setup_ln | bash -s $BITCOIN_IP $LN_NODE_ALIAS'
+   multipass exec alice -- bash -c "curl -sSL https://raw.githubusercontent.com/mohamedawnallah/bootstrap-lightning-network/main/setup_ln | bash -s $BITCOIN_IP $LN_NODE_ALIAS"
+   multipass exec bob -- bash -c "curl -sSL https://raw.githubusercontent.com/mohamedawnallah/bootstrap-lightning-network/main/setup_ln | bash -s $BITCOIN_IP $LN_NODE_ALIAS"
+   multipass exec carol -- bash -c "curl -sSL https://raw.githubusercontent.com/mohamedawnallah/bootstrap-lightning-network/main/setup_ln | bash -s $BITCOIN_IP $LN_NODE_ALIAS"
    ```
    Initialize the `BITCOIN_IP` env variable with the IP address of your Bitcoin Core node, and
    `LN_NODE_ALIAS` env variable with an optional alias for the Lightning Network node otherwise
