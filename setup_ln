@@ -104,6 +104,8 @@ EOF
 ; list available subsystems.
 debuglevel=debug
 
+; The maximum number of incoming pending channels permitted per peer.
+maxpendingchannels=100
 
 ; The alias your node will use, which can be up to 32 UTF-8 characters in
 ; length.
